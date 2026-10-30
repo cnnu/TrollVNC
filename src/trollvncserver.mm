@@ -3252,8 +3252,11 @@ static void clientGoneHook(rfbClientPtr cl) {
 
 static enum rfbNewClientAction newClientHook(rfbClientPtr cl) {
     cl->clientGoneHook = clientGoneHook;
-    // Enforce the optional server-side image quality override early; the hook
-    // installed on gScreen re-applies it after the client's SetEncodings.
+    // Enforce the optional server-side image quality override early, and again on
+    // every framebuffer update request. The per-client hook is required because a
+    // client overwrites cl->tightQualityLevel with its own SetEncodings message
+    // right after connecting.
+    cl->clientFramebufferUpdateRequestHook = tvClientFramebufferUpdateRequestHook;
     tvApplyQualityOverride(cl);
     if (!cl->viewOnly && gViewOnly)
         cl->viewOnly = TRUE;
@@ -3746,7 +3749,6 @@ static void setupRfbScreen(int argc, const char *argv[]) {
 
     // Event handlers
     gScreen->newClientHook = newClientHook;
-    gScreen->clientFramebufferUpdateRequestHook = tvClientFramebufferUpdateRequestHook;
 #if DEBUG
     gScreen->displayHook = displayHook;
     gScreen->displayFinishedHook = displayFinishedHook;
